@@ -1,6 +1,6 @@
 # etl-poc
 
-Please read https://github.com/iotaledger/tangle.js/tree/main/libs/anchors so that you get familiars with IOTA Streams and the Anchors library. 
+Please read https://github.com/iotaledger/tangle.js/tree/main/libs/anchors so that you get familiar with IOTA Streams and the Anchors library. 
 
 ## How to run
 
