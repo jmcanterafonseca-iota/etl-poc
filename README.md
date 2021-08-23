@@ -36,7 +36,7 @@ Extract the data from plant 12 on year 2020
 node extract.js 12 2020 657c84fcedd7cd9e23c2a86976ba15c85c636147929ab9193b6cd6f7e74ddbd50000000000000000:b717af36151e0a65ec78fcae:df5e1954114f270074425bc8
 ```
 
-## Load plant data from one year (plant channel already exists)
+## Load plant data from one year (plant index channel already exists)
 
 Load the data from plant 12 on year 2021
 
