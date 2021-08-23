@@ -5,6 +5,7 @@ const node = "https://chrysalis-nodes.iota.org";
 
 // Main function
 async function extractData(params) {
+    // The indexing channel
     const channelPlant = await IotaAnchoringChannel.fromID(
         params.plantChannelID, { node, encrypted: true } ).bind(SeedHelper.generateSeed(20));
 

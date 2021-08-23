@@ -10,6 +10,7 @@ async function loadData(params) {
 
     console.log("CSV data loaded");
 
+    // The indexing channel for the plant
     const channelPlant = await IotaAnchoringChannel.fromID(
         params.plantChannelID, { node, encrypted: true } ).bind(params.plantChannelSeed); 
 
@@ -28,17 +29,16 @@ async function loadData(params) {
 
     await writeOneYearData(records, channelForYear);
 
-    console.log("Data Written to Tangle");
+    console.log("Data Written to Tangle!");
 
     console.log(`Index Channel for plant: ${params.plantID}: ${channelPlant.channelID}`);
     console.log(`Seed of the index channel for plant: ${params.plantID}: ${channelPlant.seed}`);
     console.log(`Next anchorageID for plant: ${params.plantID}: ${nextPlantAnchorageID}`);
-    console.log(`Pub Key of the index channel for plant: ${params.plantID}: ${channelPlant.authorPubKey}`);
+    console.log(`Pub Key of the index channel for plant: ${params.plantID}: ${params.plantChannelAuthorPubKey}`);
 
     console.log(`Data Channel for plant ${params.plantID} and  year ${params.yearNumber}: ${channelDetails.channelID}. `);
     console.log(`Seed of the data channel for plant ${params.plantID} and year: ${params.yearNumber}: ${channelDetails.authorSeed}`);
     console.log(`Pub Key of the data channel for plant ${params.plantID} and year: ${params.yearNumber}: ${channelDetails.authorPubKey}`);
-
 }
 
 // Loads data from CSV for a plant and a year
@@ -85,14 +85,15 @@ async function createChannelForYear(channelPlant, nextAnchorage, yearNumber) {
         timestamp: new Date().toISOString()
     };
 
-    // Now it is added to the channel plant
+    // Now it is added to the channel plant (to the index)
     const result = await channelPlant.anchor(Buffer.from(JSON.stringify(message)), nextAnchorage);
 
-    // The channel for the year is created
+    // The channel details are returned and also the next anchorageID (on the indexing channel) for upcoming years
     return { channelDetails, nextPlantAnchorageID: result.msgID };
 }
 
 // Only called first time the plant data is being tracked (1 time per plant)
+// Creates the indexing channel for the plant
 async function createChannelForPlant(plantID) {
     const channel = await IotaAnchoringChannel.bindNew({ node, encrypted: true });
     
@@ -103,7 +104,9 @@ async function createChannelForPlant(plantID) {
 
     const result = await channel.anchor(Buffer.from(JSON.stringify(payload)), channel.firstAnchorageID);
 
-    return { channelID: channel.channelID, nextAnchorageID: result.msgID, seed: channel.seed };
+    return { channelID: channel.channelID, nextAnchorageID: result.msgID, 
+        seed: channel.seed, authorPubKey: channel.authorPubKey 
+    };
 }
 
 async function main() {
@@ -128,6 +131,8 @@ async function main() {
     // The next anchorage for next year in in the indexing channel
     let plantChannelNextAnchorage = process.argv[7];
 
+    let plantChannelAuthorPubKey = "";
+
     // If there is no existing channel for the plant a new one is created
     if (!plantChannelID) {
         console.log("Creating a new channel for plant", plantID, "...");
@@ -136,6 +141,7 @@ async function main() {
         plantChannelID = channelDetails.channelID;
         plantChannelSeed = channelDetails.seed;
         plantChannelNextAnchorage = channelDetails.nextAnchorageID;
+        plantChannelAuthorPubKey = channelDetails.authorPubKey;
     }
     
     await loadData({
@@ -144,7 +150,8 @@ async function main() {
         yearNumber,
         plantChannelID,
         plantChannelSeed,
-        plantChannelNextAnchorage
+        plantChannelNextAnchorage,
+        plantChannelAuthorPubKey
     });
 }
 
