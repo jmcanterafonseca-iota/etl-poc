@@ -12,7 +12,7 @@ npm install
 
 ## Load plant data from one year
 
-Load the data from plant 12 on year 2020
+Load the data from plant 12 on year 2020. There is no an existing index channel for plant 12 so a new one will be automatically created. 
 
 ```sh
 node load.js plant12-year2.csv 12 2020
@@ -35,3 +35,13 @@ Extract the data from plant 12 on year 2020
 ```sh
 node extract.js 12 2020 657c84fcedd7cd9e23c2a86976ba15c85c636147929ab9193b6cd6f7e74ddbd50000000000000000:b717af36151e0a65ec78fcae:df5e1954114f270074425bc8
 ```
+
+## Load plant data from one year (plant channel already exists)
+
+Load the data from plant 12 on year 2021
+
+```sh
+node load.js plant12-year1.csv 12 2021 657c84fcedd7cd9e23c2a86976ba15c85c636147929ab9193b6cd6f7e74ddbd50000000000000000:b717af36151e0a65ec78fcae:df5e1954114f270074425bc8 iqurcgwmabuhbjauxjadtxgbcjfhxnpbtmnlvhvmtlczgmajikaiyvmhckgtshhjqrplsfkjsfqfwdps c86733a7c16a70c8a5685449
+```
+
+You can observe that now we are passing the index channel ID for our plant, the seed and the next anchorage ID. 
