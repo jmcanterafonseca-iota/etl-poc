@@ -18,7 +18,7 @@ Load the data from plant 12 on year 2020
 node load.js plant12-year2.csv 12 2020
 ```
 
-```sh
+```
 Index Channel for plant: 12: 657c84fcedd7cd9e23c2a86976ba15c85c636147929ab9193b6cd6f7e74ddbd50000000000000000:b717af36151e0a65ec78fcae:df5e1954114f270074425bc8
 Seed of the index channel for plant: 12: iqurcgwmabuhbjauxjadtxgbcjfhxnpbtmnlvhvmtlczgmajikaiyvmhckgtshhjqrplsfkjsfqfwdps
 Next anchorageID for plant: 12: c86733a7c16a70c8a5685449
