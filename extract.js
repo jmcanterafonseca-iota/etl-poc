@@ -2,12 +2,15 @@ const { IotaAnchoringChannel, SeedHelper } = require("@tangle-js/anchors");
 const { exit } = require("process");
 
 const node = "https://chrysalis-nodes.iota.org";
+const permanode = "https://chrysalis-chronicle.iota.org/api/mainnet/";
+
+const channelConfig = { node, permanode, isPrivate: true, encrypted: true };
 
 // Main function
 async function extractData(params) {
     // The indexing channel
     const channelPlant = await IotaAnchoringChannel.fromID(
-        params.plantChannelID, { node, encrypted: true } ).bind(SeedHelper.generateSeed(20));
+        params.plantChannelID, channelConfig).bind(SeedHelper.generateSeed(20), params.psk);
 
     const result = await channelPlant.fetchNext();
 
@@ -44,7 +47,7 @@ async function extractData(params) {
 
     // Now we iterate over the data channel
     const dataChannel = await IotaAnchoringChannel.
-            fromID(channelID, { node, encrypted: true }).bind(SeedHelper.generateSeed(20));
+            fromID(channelID, channelConfig).bind(SeedHelper.generateSeed(20), params.psk);
 
     let finish = false;
     while (!finish)  {
@@ -64,18 +67,24 @@ async function main() {
     // Concerned year
     const yearNumber = process.argv[3];
 
-     // The indexing channel associated to the plant
+    // The indexing channel associated to the plant
     const plantChannelID = process.argv[4];
 
-    if (!plantID || !yearNumber || !plantChannelID) {
-        console.error("Please provide plantID, yearNumber and plant Channel ID");
+    // The preshared key associated to the plant (and yearly data)
+    // If the yearly data has a different PSK then it would be needed
+    // to supply it separately
+     const psk = process.argv[5];
+
+    if (!plantID || !yearNumber || !plantChannelID || !psk) {
+        console.error("Please provide plantID, yearNumber, plant Channel ID and pre-shared key");
         exit(-1);
     }
     
     await extractData({
         plantID,
         yearNumber,
-        plantChannelID
+        plantChannelID,
+        psk
     });
 }
 

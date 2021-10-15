@@ -3,6 +3,18 @@ const { exit } = require("process");
 const os = require('os');
 
 const node = "https://chrysalis-nodes.iota.org";
+const permanode = "https://chrysalis-chronicle.iota.org/api/mainnet/";
+
+const channelConfig = { node, permanode, isPrivate: true, encrypted: true };
+
+/** 
+ * Generates a preshared key to be used to later extract data from a channel. 
+ * 
+ * Please use here any password generator and a length that suits you well
+ */
+function generatePsk() {
+    return SeedHelper.generateSeed(12);
+}
 
 // Main function
 async function loadData(params) {
@@ -12,18 +24,18 @@ async function loadData(params) {
 
     // The indexing channel for the plant
     const channelPlant = await IotaAnchoringChannel.fromID(
-        params.plantChannelID, { node, encrypted: true } ).bind(params.plantChannelSeed); 
+        params.plantChannelID, channelConfig).bind(params.plantChannelSeed); 
 
-    console.log("Creating a channel for year", params.yearNumber);
+    console.log("Creating a channel for year", params.yearNumber, "...");
     // Here we have just created a new channel for the year and recorded it on the overall plant channel
-    const { channelDetails, nextPlantAnchorageID } = await createChannelForYear(
-        channelPlant, params.plantChannelNextAnchorage, params.yearNumber
+    const { channelDetails, nextPlantAnchorageID, psk } = await createChannelForYear(
+        channelPlant, params.plantChannelNextAnchorage, params.yearNumber, params.plantChannelPsk
     );
     console.log("Created!");
 
     // Now we bind to the new channel for the year and write the data
     const channelForYear = await IotaAnchoringChannel.fromID(
-        channelDetails.channelID, { node, encrypted: true }).bind(channelDetails.authorSeed);
+        channelDetails.channelID, channelConfig).bind(channelDetails.authorSeed);
 
     console.log("Writing data to Tangle ....");
 
@@ -33,11 +45,13 @@ async function loadData(params) {
 
     console.log(`Index Channel for plant: ${params.plantID}: ${channelPlant.channelID}`);
     console.log(`Seed of the index channel for plant: ${params.plantID}: ${channelPlant.seed}`);
+    console.log(`Pre-shared key of the index channel for plant: ${params.plantID}: ${params.plantChannelPsk}`);
     console.log(`Next anchorageID for plant: ${params.plantID}: ${nextPlantAnchorageID}`);
-    console.log(`Pub Key of the index channel for plant: ${params.plantID}: ${params.plantChannelAuthorPubKey}`);
+    console.log(`Pub Key of the index channel for plant: ${params.plantID}: ${channelPlant.authorPubKey}`);
 
     console.log(`Data Channel for plant ${params.plantID} and  year ${params.yearNumber}: ${channelDetails.channelID}. `);
     console.log(`Seed of the data channel for plant ${params.plantID} and year: ${params.yearNumber}: ${channelDetails.authorSeed}`);
+    console.log(`Pre-shared key of the data channel for plant ${params.plantID} and year: ${params.yearNumber}: ${psk}`);
     console.log(`Pub Key of the data channel for plant ${params.plantID} and year: ${params.yearNumber}: ${channelDetails.authorPubKey}`);
 }
 
@@ -72,10 +86,19 @@ async function writeOneYearData(records, channelForYear) {
 }
 
 // Creates a new channel to store the plant data for a year
-async function createChannelForYear(channelPlant, nextAnchorage, yearNumber) {
+// The same psk as for the channel is re-used. 
+// If desired a different PSK could be generated
+async function createChannelForYear(channelPlant, nextAnchorage, yearNumber, pskParam) {
+    let psk = pskParam;
+    if (!psk) {
+        psk = generatePsk();
+    }
+
+    const params = { ...channelConfig, presharedKeys: [psk] };
+
     // New channel for the year
     const channelDetails = await IotaAnchoringChannel.create(
-        SeedHelper.generateSeed(81), { node, encrypted: true }
+        SeedHelper.generateSeed(81), params
     );
 
     const message = {
@@ -89,13 +112,17 @@ async function createChannelForYear(channelPlant, nextAnchorage, yearNumber) {
     const result = await channelPlant.anchor(Buffer.from(JSON.stringify(message)), nextAnchorage);
 
     // The channel details are returned and also the next anchorageID (on the indexing channel) for upcoming years
-    return { channelDetails, nextPlantAnchorageID: result.msgID };
+    return { channelDetails, nextPlantAnchorageID: result.msgID, psk };
 }
 
 // Only called first time the plant data is being tracked (1 time per plant)
 // Creates the indexing channel for the plant
 async function createChannelForPlant(plantID) {
-    const channel = await IotaAnchoringChannel.bindNew({ node, encrypted: true });
+    // Preshared key needed for extraction
+    const psk = generatePsk();
+
+    const params = { ...channelConfig, presharedKeys: [ psk ] };
+    const channel = await IotaAnchoringChannel.bindNew(params);
     
     const payload = {
         plantID,
@@ -105,7 +132,7 @@ async function createChannelForPlant(plantID) {
     const result = await channel.anchor(Buffer.from(JSON.stringify(payload)), channel.firstAnchorageID);
 
     return { channelID: channel.channelID, nextAnchorageID: result.msgID, 
-        seed: channel.seed, authorPubKey: channel.authorPubKey 
+        seed: channel.seed, psk, authorPubKey: channel.authorPubKey 
     };
 }
 
@@ -131,7 +158,8 @@ async function main() {
     // The next anchorage for next year in in the indexing channel
     let plantChannelNextAnchorage = process.argv[7];
 
-    let plantChannelAuthorPubKey = "";
+    // The pre-shared key to use for the year channel
+    let plantChannelPsk = process.argv[8];
 
     // If there is no existing channel for the plant a new one is created
     if (!plantChannelID) {
@@ -140,8 +168,8 @@ async function main() {
         console.log("Created!");
         plantChannelID = channelDetails.channelID;
         plantChannelSeed = channelDetails.seed;
+        plantChannelPsk = channelDetails.psk;
         plantChannelNextAnchorage = channelDetails.nextAnchorageID;
-        plantChannelAuthorPubKey = channelDetails.authorPubKey;
     }
     
     await loadData({
@@ -150,8 +178,8 @@ async function main() {
         yearNumber,
         plantChannelID,
         plantChannelSeed,
-        plantChannelNextAnchorage,
-        plantChannelAuthorPubKey
+        plantChannelPsk,
+        plantChannelNextAnchorage
     });
 }
 
