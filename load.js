@@ -1,4 +1,4 @@
-const { IotaAnchoringChannel, SeedHelper } = require("@tangle-js/anchors");
+const { IotaAnchoringChannel, SeedHelper, ProtocolHelper } = require("@tangle-js/anchors");
 const { exit } = require("process");
 const os = require('os');
 
@@ -78,7 +78,9 @@ async function writeOneYearData(records, channelForYear) {
                 timestamp: new Date().toISOString()
             };
             const result = await channelForYear.anchor(Buffer.from(JSON.stringify(payload)), nextAnchorage);
-            console.log("Record anchored at ",result.msgID);
+            
+            const msgIDL1 = await ProtocolHelper.getMsgIdL1(channelForYear, result.msgID);
+            console.log("Record anchored at ", result.msgID, "Tangle MsgID:", msgIDL1);
 
             nextAnchorage = result.msgID;
         }
